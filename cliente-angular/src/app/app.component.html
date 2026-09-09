@@ -1,0 +1,311 @@
+<main class="contenedor">
+
+  <header class="encabezado">
+    <div>
+      <p class="mini">
+        POSTGRESQL + SPRING BOOT
+      </p>
+
+      <h1>
+        Catálogo de libros
+      </h1>
+    </div>
+
+    <button
+      class="primario"
+      type="button"
+      (click)="nuevo()"
+      [disabled]="estaOcupado()">
+      + Nuevo libro
+    </button>
+  </header>
+
+  @if (mensaje()) {
+    <div class="mensaje">
+      {{ mensaje() }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="error">
+      {{ error() }}
+    </div>
+  }
+
+  <section class="panel">
+
+    <div class="busqueda">
+
+      <div>
+        <label>
+          Buscar por
+        </label>
+
+        <select
+          [(ngModel)]="filtro"
+          [disabled]="estaOcupado()">
+          <option value="titulo">
+            Título
+          </option>
+
+          <option value="autor">
+            Autor
+          </option>
+        </select>
+      </div>
+
+      <div class="crece">
+        <label>
+          Texto
+        </label>
+
+        <input
+          [(ngModel)]="texto"
+          (keyup.enter)="buscar()"
+          [disabled]="estaOcupado()"
+          placeholder="Escribe para buscar">
+      </div>
+
+      <button
+        class="primario"
+        type="button"
+        (click)="buscar()"
+        [disabled]="estaOcupado()">
+        Buscar
+      </button>
+
+      <button
+        class="secundario"
+        type="button"
+        (click)="limpiar()"
+        [disabled]="estaOcupado()">
+        Limpiar
+      </button>
+    </div>
+
+    <div class="barra">
+      <strong>
+        Libros:
+        {{ datos()?.totalElementos ?? 0 }}
+      </strong>
+
+      <button
+        class="enlace"
+        type="button"
+        (click)="cargar()"
+        [disabled]="estaOcupado()">
+        {{ cargando() ? 'Cargando...' : 'Actualizar' }}
+      </button>
+    </div>
+
+    <div class="tabla-contenedor">
+      <table>
+
+        <thead>
+          <tr>
+            <th>Título</th>
+            <th>Autor</th>
+            <th>Año</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          @for (
+            libro of datos()?.contenido ?? [];
+            track libro.id
+          ) {
+            <tr>
+
+              <td>
+                <strong>
+                  {{ libro.titulo }}
+                </strong>
+
+                <small>
+                  ID: {{ libro.id }}
+                </small>
+              </td>
+
+              <td>
+                {{ libro.autor }}
+              </td>
+
+              <td>
+                {{ libro.anio ?? '—' }}
+              </td>
+
+              <td class="acciones">
+
+                <button
+                  class="enlace"
+                  type="button"
+                  (click)="editar(libro)"
+                  [disabled]="estaOcupado()">
+                  Editar
+                </button>
+
+                <button
+                  class="eliminar"
+                  type="button"
+                  (click)="eliminarPorId(libro.id, libro.titulo)"
+                  [disabled]="eliminandoId() === libro.id">
+                  {{
+                    eliminandoId() === libro.id
+                      ? 'Eliminando...'
+                      : 'Eliminar'
+                  }}
+                </button>
+
+              </td>
+            </tr>
+          }
+          @empty {
+            <tr>
+              <td
+                colspan="4"
+                class="vacio">
+
+                {{
+                  cargando()
+                    ? 'Cargando...'
+                    : 'No hay libros.'
+                }}
+
+              </td>
+            </tr>
+          }
+
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="paginacion">
+
+      <div>
+        <label>
+          Por página
+        </label>
+
+        <select
+          [(ngModel)]="tamanio"
+          (change)="cambiarTamanio()"
+          [disabled]="estaOcupado()">
+
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+        </select>
+      </div>
+
+      <div class="botones-pagina">
+
+        <button
+          class="secundario"
+          type="button"
+          (click)="anterior()"
+          [disabled]="estaOcupado() || pagina === 0">
+          Anterior
+        </button>
+
+        <button
+          class="secundario"
+          type="button"
+          (click)="siguiente()"
+          [disabled]="
+            estaOcupado() ||
+            !datos() ||
+            pagina + 1 >=
+              (datos()?.totalPaginas ?? 0)
+          ">
+          Siguiente
+        </button>
+
+      </div>
+    </footer>
+
+  </section>
+</main>
+
+@if (mostrandoFormulario) {
+
+  <div
+    class="fondo-modal"
+    (click)="
+      !guardando() &&
+      (mostrandoFormulario = false)
+    ">
+
+    <div
+      class="modal"
+      (click)="$event.stopPropagation()">
+
+      <h2>
+        {{
+          editandoId === null
+            ? 'Nuevo libro'
+            : 'Editar libro'
+        }}
+      </h2>
+
+      <form (ngSubmit)="guardar()">
+
+        <label>
+          Título
+        </label>
+
+        <input
+          name="titulo"
+          [(ngModel)]="formulario.titulo"
+          [disabled]="guardando()"
+          required>
+
+        <label>
+          Autor
+        </label>
+
+        <input
+          name="autor"
+          [(ngModel)]="formulario.autor"
+          [disabled]="guardando()"
+          required>
+
+        <label>
+          Año
+        </label>
+
+        <input
+          name="anio"
+          type="number"
+          [(ngModel)]="formulario.anio"
+          [disabled]="guardando()">
+
+        <div class="botones-modal">
+
+          <button
+            class="secundario"
+            type="button"
+            (click)="mostrandoFormulario = false"
+            [disabled]="guardando()">
+            Cancelar
+          </button>
+
+          <button
+            class="primario"
+            type="submit"
+            [disabled]="guardando()">
+            {{
+              guardando()
+                ? 'Guardando...'
+                : 'Guardar'
+            }}
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+}
